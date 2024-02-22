@@ -1,59 +1,60 @@
-import { Expense } from './expense.model';
+// import { Expense } from './expense.model';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { HttpException, HttpStatus } from '@nestjs/common';
-export class ExpenseService {
-  private readonly Expenses: Expense[] = [];
+import { Injectable } from '@nestjs/common';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { Expense, ExpenseDocument } from './expense.schema';
+import e from 'express';
 
-  createExpense(createExpenseDto: CreateExpenseDto) {
+@Injectable()
+export class ExpenseService {
+  constructor(
+    @InjectModel(Expense.name) private expenseModel: Model<ExpenseDocument>,
+  ) {}
+  async create(createExpenseDto: CreateExpenseDto): Promise<Expense> {
     try {
-      const lastId = this.Expenses
-        ? this.Expenses[this.Expenses.length - 1]?.id
-        : 0;
-      const newId = lastId ? lastId + 1 : 1;
-      const dateNow = new Date().toISOString();
-      const expense: Expense = {
-        id: newId,
-        date: dateNow,
-        ...createExpenseDto,
-      };
-      this.Expenses.push(expense);
-      return expense;
+      const newExpense = new this.expenseModel(createExpenseDto);
+      return await newExpense.save();
     } catch (e) {
       throw new HttpException(
-        'failed to create expense',
+        'expense cant be created',
         HttpStatus.BAD_REQUEST,
       );
     }
   }
-  allExpenses(): Expense[] {
-    if (this.Expenses) {
-      return this.Expenses;
+  async findAll(): Promise<ExpenseDocument[]> {
+    try {
+      return await this.expenseModel.find().exec();
+    } catch (e) {
+      throw new HttpException('expenses not found', HttpStatus.NOT_FOUND);
     }
-    throw new HttpException('expenses not found', HttpStatus.NOT_FOUND);
   }
-  findExpense(id: number) {
-    const expense = this.Expenses.find((e) => e.id === id);
+  async findExpense(id: string): Promise<Expense> {
+    const expense = await this.expenseModel.findById(id).exec();
     if (!expense) {
-      throw new HttpException('expense not found', HttpStatus.NOT_FOUND);
+      throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
     }
     return expense;
   }
-  updateExpense(id: number, updateExpenseDto: UpdateExpenseDto) {
-    const expenseIndex = this.Expenses.findIndex((e) => e.id === id);
-    let oldExpense = this.Expenses[expenseIndex];
-    const updatedExpense = { ...oldExpense, ...updateExpenseDto };
-    if (expenseIndex === -1) {
-      throw new HttpException('expense not found', HttpStatus.NOT_FOUND);
+  async updateExpense(
+    id: string,
+    updateExpenseDto: UpdateExpenseDto,
+  ): Promise<Expense> {
+    const updatedExpense = this.expenseModel
+      .findByIdAndUpdate(id, updateExpenseDto, { new: true })
+      .exec();
+    if (!updatedExpense) {
+      throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
     }
-    this.Expenses[expenseIndex] = updatedExpense;
     return updatedExpense;
   }
-  deleteExpense(id: number) {
-    const expenseIndex = this.Expenses.findIndex((e) => e.id === id);
-    const deletedExpense = this.Expenses.splice(expenseIndex, 1);
-    if (expenseIndex === -1) {
-      throw new HttpException('expense not found', HttpStatus.NOT_FOUND);
+  async deleteExpense(id: string): Promise<Expense> {
+    const expense = this.expenseModel.findById(id);
+    const deletedExpense = this.expenseModel.findByIdAndDelete(id).exec();
+    if (!expense) {
+      throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
     }
     return deletedExpense;
   }
