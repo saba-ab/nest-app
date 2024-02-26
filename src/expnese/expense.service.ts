@@ -1,15 +1,28 @@
 // import { Expense } from './expense.model';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, OnModuleInit, Query } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Expense, ExpenseDocument } from './expense.schema';
-import e from 'express';
-
+import { faker } from '@faker-js/faker';
 @Injectable()
-export class ExpenseService {
+export class ExpenseService implements OnModuleInit {
+  async onModuleInit() {
+    const count = await this.expenseModel.countDocuments();
+    if (count < 10) {
+      const expensesToInsert = [];
+      for (let i = 0; i < 10000; i++) {
+        const expense: Expense = {
+          name: faker.person.firstName(),
+          cost: faker.number.int({ min: 0, max: 22200 }),
+        };
+        expensesToInsert.push(expense);
+      }
+      this.expenseModel.insertMany(expensesToInsert);
+    }
+  }
   constructor(
     @InjectModel(Expense.name) private expenseModel: Model<ExpenseDocument>,
   ) {}
@@ -24,9 +37,13 @@ export class ExpenseService {
       );
     }
   }
-  async findAll(): Promise<ExpenseDocument[]> {
+  async findAll(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<ExpenseDocument[]> {
     try {
-      return await this.expenseModel.find().exec();
+      const skips = (page - 1) * limit;
+      return await this.expenseModel.find().skip(skips).limit(limit).exec();
     } catch (e) {
       throw new HttpException('expenses not found', HttpStatus.NOT_FOUND);
     }
@@ -57,5 +74,15 @@ export class ExpenseService {
       throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
     }
     return deletedExpense;
+  }
+  async filterByCost(cost: number): Promise<ExpenseDocument[]> {
+    try {
+      const expenses = await this.expenseModel
+        .find({ cost: { $gte: cost } })
+        .exec();
+      return expenses;
+    } catch (e) {
+      throw new HttpException('expenses not found', HttpStatus.NOT_FOUND);
+    }
   }
 }

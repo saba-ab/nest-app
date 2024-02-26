@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -22,10 +23,17 @@ export class ExpenseController {
 
   @Get()
   // @UseGuards(ApiGuard)
-  async getAllExpenses() {
-    return this.expenseService.findAll();
+  async getAllExpenses(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ) {
+    return this.expenseService.findAll(page, limit);
   }
-
+  @Get('/count')
+  async getExpenseByCost(@Query('cost') costStr: string) {
+    const cost = parseInt(costStr);
+    return this.expenseService.filterByCost(cost);
+  }
   @Get(':id')
   // @UseGuards(ApiGuard)
   async getOneExpense(@Param('id') id: string) {

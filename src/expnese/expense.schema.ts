@@ -8,7 +8,7 @@ export class Expense {
   @Prop()
   name: string;
 
-  @Prop()
+  @Prop({ index: true })
   cost: number;
 }
 
