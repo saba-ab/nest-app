@@ -1,12 +1,15 @@
-import { IsInt, IsString, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsInt, IsString, Min, Max, IsNotEmpty, IsDate } from 'class-validator';
 
 export class UpdateExpenseDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @IsInt()
   @Min(0)
   @Max(5000)
-  cost: number;
+  cost?: number;
+
+  @IsDate()
+  date?: Date;
 }

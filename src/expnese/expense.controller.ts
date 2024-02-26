@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -21,37 +22,44 @@ export class ExpenseController {
   constructor(private expenseService: ExpenseService) {}
 
   @Get()
-  @UseGuards(ApiGuard)
-  async getAllExpenses() {
-    return this.expenseService.allExpenses();
+  // @UseGuards(ApiGuard)
+  async getAllExpenses(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ) {
+    return this.expenseService.findAll(page, limit);
   }
-
+  @Get('/count')
+  async getExpenseByCost(@Query('cost') costStr: string) {
+    const cost = parseInt(costStr);
+    return this.expenseService.filterByCost(cost);
+  }
   @Get(':id')
-  @UseGuards(ApiGuard)
-  async getOneExpense(@Param('id') id: number) {
-    return this.expenseService.findExpense(+id);
+  // @UseGuards(ApiGuard)
+  async getOneExpense(@Param('id') id: string) {
+    return this.expenseService.findExpense(id);
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  // @UseGuards(AdminGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
   async createExpense(@Body() createExpenseDto: CreateExpenseDto) {
-    return this.expenseService.createExpense(createExpenseDto);
+    return this.expenseService.create(createExpenseDto);
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  // @UseGuards(AdminGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
   async modifyExpense(
-    @Param('id') id: number,
+    @Param('id') id: string,
     updateExpense: UpdateExpenseDto,
   ) {
-    return this.expenseService.updateExpense(+id, updateExpense);
+    return this.expenseService.updateExpense(id, updateExpense);
   }
 
   @Delete(':id')
-  @UseGuards(AdminGuard)
-  async deleteExpense(@Param('id') id: number) {
-    return this.expenseService.deleteExpense(+id);
+  // @UseGuards(AdminGuard)
+  async deleteExpense(@Param('id') id: string) {
+    return this.expenseService.deleteExpense(id);
   }
 }
